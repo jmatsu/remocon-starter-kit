@@ -1,0 +1,72 @@
+default_env: &default_env
+  working_directory: ~/remote-config-manage
+  image: circleci/ruby:2.5.1
+  environment:
+    BUNDLE_JOBS: 4
+    BUNDLE_RETRY: 3
+    REMOCON_PREFIX: projects
+
+version: 2
+jobs:
+  on_feature_branch:
+    <<: *default_env
+    steps:
+      - checkout
+      - run: echo "export PATH=$PWD/bin:$PATH"
+      - restore_cache: &restore_cache
+          keys:
+            - bundle-{{ checksum ".ruby-version" }}-{{ checksum "Gemfile.lock" }}
+            - bundle-
+      - run:
+          command: bundle check || bundle install
+      - save_cache:
+          key: bundle-{{ checksum ".ruby-version" }}-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+      - run:
+          name: Validate files
+          command: |
+            while read PROJECT_NAME; do
+              JSON_FILE=$(get_service_account_json "$PROJECT_NAME")
+              export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
+              bundle exec remocon validate
+            done < <(find_changed_projects.bash)
+  on_deploy_branch:
+    <<: *default_env
+    steps:
+      - checkout
+      - run: echo "export PATH=$PWD/bin:$PATH"
+      - restore_cache: *restore_cache
+      - run:
+          name: Push files
+          command: |
+            BRANCH_NAME="push_result"
+            git checkout -b "$BRANCH_NAME" || git branch -D "$BRANCH_NAME" && git checkout -b "$BRANCH_NAME"
+
+            while read PROJECT_NAME; do
+              bundle exec remocon create
+              JSON_FILE=$(get_service_account_json "$PROJECT_NAME")
+              export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
+              bundle exec remocon push || (
+                echo "$PROJECT_NAME failed to push" 1>&2
+                git checkout -- "$REMOCON_PREFIX/$PROJECT_NAME"
+              )
+            done < <(find "$REMOCON_PREFIX" -type d -depth 1 | awk -F/ '$0=$2')
+
+            git add .
+            git commit -m "Applied push results"
+            create_pr.bash
+workflows:
+  version: 2
+  validation:
+    jobs:
+      - on_feature_branch
+          filters:
+            branches:
+              ignore: /master/
+  push_and_reflect_results:
+    jobs:
+      - on_deploy_branch
+          filters:
+            branches:
+              only: /master/
