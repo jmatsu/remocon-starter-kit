@@ -5,10 +5,10 @@ create_pr() {
                    "/$CIRCLE_PROJECT_USERNAME"\
                    "/$CIRCLE_PROJECT_REPONAME/pulls"
 
-  local -r branch_name="$1"
+  local -r branch_name="$1" title="$2"
   local body=("\"head\": \"$branch_name\"", \
               "\"base\": \"$CIRCLE_BRANCH\"", \
-              "\"title\": \"Update via CI\"")
+              "\"title\": \"$title\"")
   local json_body="{${body[*]}}"
 
   curl -s -H "Authorization: token ${GH_TOKEN}" \
@@ -18,4 +18,4 @@ create_pr() {
 
 : "${GH_TOKEN:=$YOUR_CUSTOM_ENV_NAME}"
 
-create_pr "$(git rev-parse --abbrev-ref HEAD)"
+create_pr "$(git rev-parse --abbrev-ref HEAD)" "$1"

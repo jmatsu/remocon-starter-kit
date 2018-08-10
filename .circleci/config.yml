@@ -12,7 +12,7 @@ jobs:
     <<: *default_env
     steps:
       - checkout
-      - run: echo "export PATH=$PWD/bin:$PATH"
+      - run: echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
       - restore_cache: &restore_cache
           keys:
             - bundle-{{ checksum ".ruby-version" }}-{{ checksum "Gemfile.lock" }}
@@ -27,15 +27,13 @@ jobs:
           name: Validate files
           command: |
             while read PROJECT_NAME; do
-              JSON_FILE=$(get_service_account_json "$PROJECT_NAME")
-              export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
               bundle exec remocon validate
             done < <(find_changed_projects.bash)
   on_deploy_branch:
     <<: *default_env
     steps:
       - checkout
-      - run: echo "export PATH=$PWD/bin:$PATH"
+      - run: echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
       - restore_cache: *restore_cache
       - run:
           name: Push files
@@ -45,6 +43,12 @@ jobs:
 
             while read PROJECT_NAME; do
               bundle exec remocon create
+
+              if [[ -z "$(git diff --name-only "$REMOCON_PREFIX/$PROJECT_NAME")" ]]; then
+                echo "$PROJECT_NAME is not changed"
+                continue
+              fi
+
               JSON_FILE=$(get_service_account_json "$PROJECT_NAME")
               export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
               bundle exec remocon push || (
@@ -54,8 +58,35 @@ jobs:
             done < <(find "$REMOCON_PREFIX" -type d -depth 1 | awk -F/ '$0=$2')
 
             git add .
-            git commit -m "Applied push results"
-            create_pr.bash
+            git commit -m "Applied push results" || exit 0
+            git push origin "$BRANCH_NAME"
+            create_pr.bash "Apply push results"
+  check_remote_state:
+    <<: *default_env
+    - checkout
+      - run: echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
+      - restore_cache: *restore_cache
+      - run:
+          name: Check local etags and remote etags
+          command: |
+            BRANCH_NAME="remote_sync"
+            git checkout -b "$BRANCH_NAME" || git branch -D "$BRANCH_NAME" && git checkout -b "$BRANCH_NAME"
+
+            while read PROJECT_NAME; do
+              remote_etag=$(get_etag.bash "$PROJECT_NAME")
+              local_etag="$(cat $REMOCON_PREFIX/$PROJECT_NAME/etag || echo -n)"
+
+              if [[ "$remote_etag" != "$local_etag" ]]; then
+                bundle exec remocon pull --id="$PROJECT_NAME"
+                git add "$REMOCON_PREFIX/$PROJECT_NAME"
+              else
+                echo "Good! $PROJECT_NAME"
+              fi
+            done < (ls -1 "$REMOCON_PREFIX")
+
+            git commit -m "Pull all changed projects" || exit 0
+            git push origin "$BRANCH_NAME"
+            create_pr.bash "Sync with remote"
 workflows:
   version: 2
   validation:
@@ -70,3 +101,13 @@ workflows:
           filters:
             branches:
               only: /master/
+  sync_with_remote:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - check_remote_state
