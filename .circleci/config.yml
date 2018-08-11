@@ -6,13 +6,16 @@ default_env: &default_env
     BUNDLE_RETRY: 3
     REMOCON_PREFIX: projects
 
+reference:
+  run: &add_bin echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
+
 version: 2
 jobs:
   on_feature_branch:
     <<: *default_env
     steps:
       - checkout
-      - run: echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
+      - run: *add_bin
       - restore_cache: &restore_cache
           keys:
             - bundle-{{ checksum ".ruby-version" }}-{{ checksum "Gemfile.lock" }}
@@ -33,7 +36,7 @@ jobs:
     <<: *default_env
     steps:
       - checkout
-      - run: echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
+      - run: *add_bin
       - restore_cache: *restore_cache
       - run:
           name: Push files
@@ -46,25 +49,24 @@ jobs:
 
               if [[ -z "$(git diff --name-only "$REMOCON_PREFIX/$PROJECT_NAME")" ]]; then
                 echo "$PROJECT_NAME is not changed"
-                continue
+              else 
+                JSON_FILE=$(get_service_account_json.bash "$PROJECT_NAME")
+                export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
+                bundle exec remocon push || (
+                  echo "$PROJECT_NAME failed to push" 1>&2
+                  git checkout -- "$REMOCON_PREFIX/$PROJECT_NAME"
+                )
               fi
-
-              JSON_FILE=$(get_service_account_json "$PROJECT_NAME")
-              export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
-              bundle exec remocon push || (
-                echo "$PROJECT_NAME failed to push" 1>&2
-                git checkout -- "$REMOCON_PREFIX/$PROJECT_NAME"
-              )
-            done < <(find "$REMOCON_PREFIX" -type d -depth 1 | awk -F/ '$0=$2')
+            done < <(ls -1 "$REMOCON_PREFIX")
 
             git add .
             git commit -m "Applied push results" || exit 0
-            git push origin "$BRANCH_NAME"
+            git push origin "$BRANCH_NAME" -f
             create_pr.bash "Apply push results"
   check_remote_state:
     <<: *default_env
     - checkout
-      - run: echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
+      - run: *add_bin
       - restore_cache: *restore_cache
       - run:
           name: Check local etags and remote etags
@@ -82,10 +84,10 @@ jobs:
               else
                 echo "Good! $PROJECT_NAME"
               fi
-            done < (ls -1 "$REMOCON_PREFIX")
+            done < <(ls -1 "$REMOCON_PREFIX")
 
             git commit -m "Pull all changed projects" || exit 0
-            git push origin "$BRANCH_NAME"
+            git push origin "$BRANCH_NAME" -f
             create_pr.bash "Sync with remote"
 workflows:
   version: 2
