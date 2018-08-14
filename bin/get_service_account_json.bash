@@ -7,8 +7,8 @@ set -eu
 SERVICE_ACCOUNT_JSON_PATH="service-account.json"
 
 case "$1" in
-    "your project name")
-        echo "<your account json file>" > "$SERVICE_ACCOUNT_JSON_PATH"
+    "<edit here>")
+        echo "<edit here> the content of service account json" > "$SERVICE_ACCOUNT_JSON_PATH"
 esac
 
 echo "$SERVICE_ACCOUNT_JSON_PATH"

@@ -1,6 +1,7 @@
 default_env: &default_env
   working_directory: ~/remote-config-manage
-  image: circleci/ruby:2.5.1
+  docker:
+    - image: circleci/ruby:2.5.1
   environment:
     BUNDLE_JOBS: 4
     BUNDLE_RETRY: 3
@@ -8,6 +9,7 @@ default_env: &default_env
 
 reference:
   run: &add_bin echo "export PATH=$PWD/bin:$PATH" >> $BASH_ENV
+  run: &setup_git_config git config user.email "<edit here>" && git config user.name "<edit here>"
 
 version: 2
 jobs:
@@ -19,42 +21,56 @@ jobs:
       - restore_cache: &restore_cache
           keys:
             - bundle-{{ checksum ".ruby-version" }}-{{ checksum "Gemfile.lock" }}
+            - bundle-{{ checksum ".ruby-version" }}-
             - bundle-
-      - run:
-          command: bundle check || bundle install
-      - save_cache:
+      - run: &bundle_install bundle check || bundle install
+      - save_cache: &save_cache
           key: bundle-{{ checksum ".ruby-version" }}-{{ checksum "Gemfile.lock" }}
           paths:
             - vendor/bundle
       - run:
           name: Validate files
           command: |
-            while read PROJECT_NAME; do
+            while read REMOCON_FIREBASE_PROJECT_ID; do
+              export REMOCON_FIREBASE_PROJECT_ID
+              
+              JSON_FILE=$(get_service_account_json.bash) && echo $JSON_FILE
+
+              export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon token --service-json="$JSON_FILE")
+              
               bundle exec remocon validate
-            done < <(find_changed_projects.bash)
+            done < <(ls -1 "$REMOCON_PREFIX")
   on_deploy_branch:
     <<: *default_env
     steps:
       - checkout
       - run: *add_bin
       - restore_cache: *restore_cache
+      - run: *bundle_install
+      - save_cache: *save_cache
+      - run: *setup_git_config
+      - add_ssh_keys: &add_push_keys
+          fingerprints: <edit here>
       - run:
           name: Push files
           command: |
             BRANCH_NAME="push_result"
-            git checkout -b "$BRANCH_NAME" || git branch -D "$BRANCH_NAME" && git checkout -b "$BRANCH_NAME"
+            git checkout -b "$BRANCH_NAME" || (git branch -D "$BRANCH_NAME" && git checkout -b "$BRANCH_NAME")
 
-            while read PROJECT_NAME; do
+            while read REMOCON_FIREBASE_PROJECT_ID; do
+              export REMOCON_FIREBASE_PROJECT_ID && echo "$REMOCON_FIREBASE_PROJECT_ID"
+
               bundle exec remocon create
 
               if [[ -z "$(git diff --name-only "$REMOCON_PREFIX/$PROJECT_NAME")" ]]; then
-                echo "$PROJECT_NAME is not changed"
+                echo "$REMOCON_FIREBASE_PROJECT_ID is not changed"
               else 
-                JSON_FILE=$(get_service_account_json.bash "$PROJECT_NAME")
-                export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon --service-json="$JSON_FILE")
+                JSON_FILE=$(get_service_account_json.bash) && echo $JSON_FILE
+
+                export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon token --service-json="$JSON_FILE")
                 bundle exec remocon push || (
-                  echo "$PROJECT_NAME failed to push" 1>&2
-                  git checkout -- "$REMOCON_PREFIX/$PROJECT_NAME"
+                  echo "$REMOCON_FIREBASE_PROJECT_ID failed to push" 1>&2
+                  git checkout -- "$REMOCON_PREFIX/$REMOCON_FIREBASE_PROJECT_ID"
                 )
               fi
             done < <(ls -1 "$REMOCON_PREFIX")
@@ -65,45 +81,56 @@ jobs:
             create_pr.bash "Apply push results"
   check_remote_state:
     <<: *default_env
-    - checkout
+    steps:
+      - checkout
       - run: *add_bin
       - restore_cache: *restore_cache
+      - run: *bundle_install
+      - save_cache: *save_cache
+      - run: *setup_git_config
+      - add_ssh_keys: *add_push_keys
       - run:
           name: Check local etags and remote etags
           command: |
             BRANCH_NAME="remote_sync"
-            git checkout -b "$BRANCH_NAME" || git branch -D "$BRANCH_NAME" && git checkout -b "$BRANCH_NAME"
+            git checkout -b "$BRANCH_NAME" || (git branch -D "$BRANCH_NAME" && git checkout -b "$BRANCH_NAME")
 
-            while read PROJECT_NAME; do
-              remote_etag=$(get_etag.bash "$PROJECT_NAME")
-              local_etag="$(cat $REMOCON_PREFIX/$PROJECT_NAME/etag || echo -n)"
+            while read REMOCON_FIREBASE_PROJECT_ID; do
+              export REMOCON_FIREBASE_PROJECT_ID && echo "$REMOCON_FIREBASE_PROJECT_ID"
+              
+              JSON_FILE=$(get_service_account_json.bash) && echo $JSON_FILE
 
-              if [[ "$remote_etag" != "$local_etag" ]]; then
-                bundle exec remocon pull --id="$PROJECT_NAME"
-                git add "$REMOCON_PREFIX/$PROJECT_NAME"
+              export REMOCON_FIREBASE_ACCESS_TOKEN=$(bundle exec remocon token --service-json="$JSON_FILE")
+
+              if [[ "$(get_etag.bash)" != "$(cat $REMOCON_PREFIX/$REMOCON_FIREBASE_PROJECT_ID/etag || echo -n)" ]]; then
+                bundle exec remocon pull
+                git add "$REMOCON_PREFIX/$REMOCON_FIREBASE_PROJECT_ID"
               else
-                echo "Good! $PROJECT_NAME"
+                echo "Good! $REMOCON_FIREBASE_PROJECT_ID"
               fi
             done < <(ls -1 "$REMOCON_PREFIX")
 
             git commit -m "Pull all changed projects" || exit 0
             git push origin "$BRANCH_NAME" -f
             create_pr.bash "Sync with remote"
+
 workflows:
   version: 2
   validation:
     jobs:
-      - on_feature_branch
+      - on_feature_branch:
           filters:
             branches:
               ignore: /master/
   push_and_reflect_results:
     jobs:
-      - on_deploy_branch
+      - on_deploy_branch:
           filters:
             branches:
               only: /master/
   sync_with_remote:
+    jobs:
+      - check_remote_state
     triggers:
       - schedule:
           cron: "0 0 * * *"
@@ -111,5 +138,3 @@ workflows:
             branches:
               only:
                 - master
-    jobs:
-      - check_remote_state
