@@ -54,3 +54,4 @@ config.json.backup
 .bundle/
 
 !.keep
+service-account.json
