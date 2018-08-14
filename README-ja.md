@@ -20,13 +20,17 @@ CircleCIを利用して、[jmatsu/remocon](https://github.com/jmatsu/remocon) �
 
 ## Getting Started
 
-1. Fork し、clone してください
+1. Fork して clone してください
 
 ```
 git clone git@github.com:<your name>/remocon-starter-kit.git
 ```
 
-2. PR を作成するために必要な Github API token と write権限を持った ssh keyを用意してください
+2. リポジトリの可視性を変更してください
+
+private が推奨です。
+
+3. PR を作成するために必要な Github API token と write権限を持った ssh keyを用意してください
 
 *Github token*
 
@@ -42,7 +46,7 @@ https://github.com/jmatsu/remocon-starter-kit/blob/master/.circleci/config.yml#L
 
 ref: https://circleci.com/docs/2.0/add-ssh-key/ , https://developer.github.com/v3/guides/managing-deploy-keys/
 
-3. プレースホルダの置き換え
+4. プレースホルダの置き換え
 
 いくつかのスクリプトは変更しなければならない箇所があり、プレースホルダを置いています。
 
@@ -50,7 +54,7 @@ See https://github.com/jmatsu/remocon-starter-kit/search?q=%22%3Cedit+here%3E%22
 
 上記の箇所を自分の好みのものに変更してください。
 
-4. Firebase プロジェクトのセットアップ
+5. Firebase プロジェクトのセットアップ
 
 bundler を使って gemをインストールしてください。
 
@@ -84,9 +88,9 @@ bundle exec remocon pull
       - etag
 ```
 
-5. CircleCI上でそのリポジトリを有効化する
+6. CircleCI上でそのリポジトリを有効化する
 
-ガイドにしたがってください。これで設定は終了です。
+ガイドにしたがって有効化してください。これで設定は終了です。
 
 ## NOTE
 
