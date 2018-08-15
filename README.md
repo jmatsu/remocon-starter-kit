@@ -20,6 +20,10 @@ This repository is a sample but production usage of [jmatsu/remocon](https://git
 
 ## Getting Started
 
+0. Please read the official documents and enable Remote Config API
+
+https://firebase.google.com/docs/remote-config/use-config-rest?hl=en#get_started_using_the_rest_api
+
 1. Please duplicate this repository
 
 Forked repository cannot be private so that you need to duplicate this repository
