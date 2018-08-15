@@ -24,7 +24,7 @@ This repository is a sample but production usage of [jmatsu/remocon](https://git
 
 Forked repository cannot be private so that you need to duplicate this repository
 
-- Create a repository in your account or organization (e.g. remote-config-management)
+- Create a *private* repository in your account or organization (e.g. remote-config-management)
 - Run the script below
 
 ```
@@ -38,11 +38,7 @@ git remote set-url origin git@github.com:<your name>/remote-config-management.gi
 git push origin master
 ```
 
-2. Change the visibility of the repository
-
-`private` is recommended
-
-3. Set up your Github token and a ssh key for write access
+2. Set up your Github token and a ssh key for write access
 
 *Github token*
 
@@ -58,13 +54,13 @@ For the security reason, you should create a new ssh key and add it with reposit
 
 ref: https://circleci.com/docs/2.0/add-ssh-key/ , https://developer.github.com/v3/guides/managing-deploy-keys/
 
-4. Replace some placeholders
+3. Replace some placeholders
 
 These are what you need to modify.
 
 See https://github.com/jmatsu/remocon-starter-kit/search?q=%22%3Cedit+here%3E%22&unscoped_q=%22%3Cedit+here%3E%22
 
-5. Set up your firebase projects
+4. Set up your firebase projects
 
 First, please install gems.
 
@@ -98,7 +94,9 @@ bundle exec remocon pull
       - etag
 ```
 
-6. Enable your project in CircleCI
+You will manage files with following this structure.
+
+5. Enable your project in CircleCI
 
 yay, now you can manage remote configs by code!
 
