@@ -20,10 +20,22 @@ This repository is a sample but production usage of [jmatsu/remocon](https://git
 
 ## Getting Started
 
-1. Please fork this repository and clone it
+1. Please duplicate this repository
+
+Forked repository cannot be private so that you need to duplicate this repository
+
+- Create a repository in your account or organization (e.g. remote-config-management)
+- Run the script below
 
 ```
-git clone git@github.com:<your name>/remocon-starter-kit.git
+cd /path/to/workspace
+
+git clone git@github.com:jmatsu/remote-config-management.git remote-config-management
+
+cd remote-config-management
+
+git remote set-url origin git@github.com:<your name>/remote-config-management.git
+git push origin master
 ```
 
 2. Change the visibility of the repository
