@@ -30,7 +30,7 @@ Forked repository cannot be private so that you need to duplicate this repositor
 ```
 cd /path/to/workspace
 
-git clone git@github.com:jmatsu/remote-config-management.git remote-config-management
+git clone git@github.com:jmatsu/remocon-starter-kit.git remote-config-management
 
 cd remote-config-management
 
