@@ -20,17 +20,25 @@ CircleCIを利用して、[jmatsu/remocon](https://github.com/jmatsu/remocon) �
 
 ## Getting Started
 
-1. Fork して clone してください
+1. リポジトリの複製を行ってください
+
+Fork されたリポジトリは private にすることができないため、fork 以外の手段で複製する必要があります。
+
+- private でリポジトリを新規作成する (e.g. remote-config-management)
+- 以下のスクリプトを実行する
 
 ```
-git clone git@github.com:<your name>/remocon-starter-kit.git
+cd /path/to/workspace
+
+git clone git@github.com:jmatsu/remocon-starter-kit.git remote-config-management
+
+cd remote-config-management
+
+git remote set-url origin git@github.com:<your name>/remote-config-management.git
+git push origin master
 ```
 
-2. リポジトリの可視性を変更してください
-
-private が推奨です。
-
-3. PR を作成するために必要な Github API token と write権限を持った ssh keyを用意してください
+2. PR を作成するために必要な Github API token と write権限を持った ssh keyを用意してください
 
 *Github token*
 
@@ -46,15 +54,15 @@ https://github.com/jmatsu/remocon-starter-kit/blob/master/.circleci/config.yml#L
 
 ref: https://circleci.com/docs/2.0/add-ssh-key/ , https://developer.github.com/v3/guides/managing-deploy-keys/
 
-4. プレースホルダの置き換え
+3. プレースホルダの置き換え
 
-いくつかのスクリプトは変更しなければならない箇所があり、プレースホルダを置いています。
+いくつかのスクリプトは変更しなければならない箇所があり、`<edit here>` という名前でプレースホルダやアンカーを置いています。
 
 See https://github.com/jmatsu/remocon-starter-kit/search?q=%22%3Cedit+here%3E%22&unscoped_q=%22%3Cedit+here%3E%22
 
 上記の箇所を自分の好みのものに変更してください。
 
-5. Firebase プロジェクトのセットアップ
+4. Firebase プロジェクトのセットアップ
 
 bundler を使って gemをインストールしてください。
 
@@ -88,7 +96,9 @@ bundle exec remocon pull
       - etag
 ```
 
-6. CircleCI上でそのリポジトリを有効化する
+このような形式で管理していきます。
+
+5. CircleCI上でそのリポジトリを有効化する
 
 ガイドにしたがって有効化してください。これで設定は終了です。
 
@@ -100,7 +110,7 @@ bundle exec remocon pull
 
 *About visibility of the repository*
 
-`private` を推奨します。少なくとも `public` にすることを想定していません。
+`private` を推奨します。少なくとも `public` にすることは想定していません。
 
 ---
 
