@@ -20,6 +20,10 @@ CircleCIを利用して、[jmatsu/remocon](https://github.com/jmatsu/remocon) �
 
 ## Getting Started
 
+0. 公式ドキュメントに従って、 Remote Config API を有効化してください。
+
+https://firebase.google.com/docs/remote-config/use-config-rest?hl=en#get_started_using_the_rest_api
+
 1. リポジトリの複製を行ってください
 
 Fork されたリポジトリは private にすることができないため、fork 以外の手段で複製する必要があります。
